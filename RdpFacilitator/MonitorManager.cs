@@ -58,15 +58,15 @@ namespace RdpFacilitator
                     .Order()
                     .ToList();
 
-                foreach (var colum in columns)
+                foreach (var column in columns)
                 {
                     var monitors = monitorsOnRow
-                        .Where(d => d.LeftMostPosition == colum)
+                        .Where(d => d.LeftMostPosition == column)
                         .ToList();
 
                     if (monitors.Count != 1)
                     {
-                        throw new Exception($"{monitors.Count} monitor(s) detected insted of 1.");
+                        throw new Exception($"{monitors.Count} monitor(s) detected instead of 1.");
                     }
 
                     monitors[0].RowIndex = rowIndex;
@@ -80,12 +80,13 @@ namespace RdpFacilitator
             }
         }
 
-        public string GetSelectMonitors()
+        public string? GetSelectMonitors()
         {
             if(!ParseSelectedMonitors())
             {
                 Console.WriteLine("Use -h --help for detail about parameters format.");
                 PrintDetectedMonitorGrid();
+                return null;
             }
 
             ComputeDetectedMonitorGridIndex();
@@ -105,21 +106,33 @@ namespace RdpFacilitator
                     .Where(d => d.RowIndex == selectedMonitorPosition.RowIndex && d.ColumnIndex == selectedMonitorPosition.ColumnIndex)
                     .SingleOrDefault();
 
-                if(matchingDetectedMonitor != null && !string.IsNullOrWhiteSpace(matchingDetectedMonitor.DeviceNumber))
+                if(matchingDetectedMonitor == null
+                    || string.IsNullOrWhiteSpace(matchingDetectedMonitor.DeviceNumber)
+                    || !int.TryParse(matchingDetectedMonitor.DeviceNumber, out var deviceNumber))
                 {
-                    if (Verbose)
-                    {
-                        Console.Write($"Matching device {matchingDetectedMonitor.DeviceName} with number {matchingDetectedMonitor.DeviceNumber}");
-                        Console.WriteLine($" at position {selectedMonitorPosition.RowIndex}:{selectedMonitorPosition.ColumnIndex}");
-                    }
-
-                    if(selectedMonitorsNumbersForRdp.Length > 0)
-                    {
-                        selectedMonitorsNumbersForRdp.Append(",");
-                    }
-
-                    selectedMonitorsNumbersForRdp.Append(int.Parse(matchingDetectedMonitor.DeviceNumber));
+                    Console.WriteLine($"No usable monitor detected at position {selectedMonitorPosition.RowIndex}:{selectedMonitorPosition.ColumnIndex}.");
+                    PrintDetectedMonitorGrid();
+                    return null;
                 }
+
+                if (Verbose)
+                {
+                    Console.Write($"Matching device {matchingDetectedMonitor.DeviceName} with number {matchingDetectedMonitor.DeviceNumber}");
+                    Console.WriteLine($" at position {selectedMonitorPosition.RowIndex}:{selectedMonitorPosition.ColumnIndex}");
+                }
+
+                if(selectedMonitorsNumbersForRdp.Length > 0)
+                {
+                    selectedMonitorsNumbersForRdp.Append(",");
+                }
+
+                selectedMonitorsNumbersForRdp.Append(deviceNumber);
+            }
+
+            if (selectedMonitorsNumbersForRdp.Length == 0)
+            {
+                Console.WriteLine("No monitor selected.");
+                return null;
             }
 
             return selectedMonitorsNumbersForRdp.ToString();

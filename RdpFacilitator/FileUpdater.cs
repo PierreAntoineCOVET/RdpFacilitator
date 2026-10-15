@@ -12,89 +12,109 @@ namespace RdpFacilitator
         private readonly string FilePath;
         private readonly SaveMode SaveMode;
         private readonly string SelectedMonitors;
+        private readonly string? Address;
         private const string SaveComplement = ".save";
+        private const string FullAddressKey = "full address:s:";
+        private const string MultiMonitorKey = "use multimon:i:";
+        private const string SelectedMonitorsKey = "selectedmonitors:s:";
 
-        public FileUpdater(string filePath, SaveMode saveMode, string selectedMonitors)
+        public FileUpdater(string filePath, SaveMode saveMode, string selectedMonitors, string? address)
         {
-            FilePath = filePath;
+            FilePath = Path.GetFullPath(filePath);
             SaveMode = saveMode;
             SelectedMonitors = selectedMonitors;
+            Address = address;
         }
 
         public string UpdateRdpFile()
         {
             if(!File.Exists(FilePath))
             {
-                throw new FileNotFoundException("File does not exist");
+                CreateRdpFile();
+                return FilePath;
             }
 
             if(SaveMode != SaveMode.None)
             {
-                return SaveRdpFile();
+                File.Copy(FilePath, GetSaveFile(), true);
             }
 
-            return null;
+            UpdateExistingRdpFile();
+
+            return FilePath;
         }
 
-        private string SaveRdpFile()
+        private void CreateRdpFile()
         {
-            var newFileName = GetSaveFile();
-            var newFileContent = GetNewFileContent();
-            saveFile(newFileName, newFileContent);
-
-            return newFileName;
-        }
-
-        private void saveFile(string newFileName, string[] newFileContent)
-        {
-            if (File.Exists(newFileName))
+            if (string.IsNullOrWhiteSpace(Address))
             {
-                File.Delete(newFileName);
+                throw new FileNotFoundException($"File {FilePath} does not exist. Use -a to give the remote computer address and create it.");
             }
 
-            File.WriteAllLines(newFileName, newFileContent);
+            File.WriteAllLines(FilePath, new[]
+            {
+                FullAddressKey + Address,
+                MultiMonitorKey + "1",
+                SelectedMonitorsKey + SelectedMonitors
+            }, Encoding.Unicode);
         }
 
-        private string[] GetNewFileContent()
+        private void UpdateExistingRdpFile()
         {
-            var currentFileContent = File.ReadAllLines(FilePath);
-            var newFileContent = new string[currentFileContent.Length];
+            Encoding encoding;
+            List<string> fileContent;
 
-            for (int i=0; i<currentFileContent.Length; i++)
+            using (var reader = new StreamReader(FilePath, new UTF8Encoding(false), true))
             {
-                var currentLine = currentFileContent[i];
-                var newLine = string.Empty;
-
-                if(currentLine.Contains("selectedmonitors"))
-                {
-                    var splitedLine = currentLine.Split(':');
-                    splitedLine[splitedLine.Length - 1] = SelectedMonitors;
-                    newLine = string.Join(':', splitedLine);
-                }
-                else
-                {
-                    newLine = currentLine;
-                }
-
-                newFileContent[i] = newLine;
+                fileContent = reader.ReadToEnd()
+                    .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)
+                    .ToList();
+                encoding = reader.CurrentEncoding;
             }
 
-            return newFileContent;
+            if (fileContent.Count > 0 && fileContent[^1].Length == 0)
+            {
+                fileContent.RemoveAt(fileContent.Count - 1);
+            }
+
+            if (!string.IsNullOrWhiteSpace(Address))
+            {
+                SetValue(fileContent, FullAddressKey, Address);
+            }
+
+            SetValue(fileContent, MultiMonitorKey, "1");
+            SetValue(fileContent, SelectedMonitorsKey, SelectedMonitors);
+
+            File.WriteAllLines(FilePath, fileContent, encoding);
+        }
+
+        private static void SetValue(List<string> fileContent, string key, string value)
+        {
+            var index = fileContent.FindIndex(l => l.StartsWith(key, StringComparison.OrdinalIgnoreCase));
+
+            if (index >= 0)
+            {
+                fileContent[index] = key + value;
+            }
+            else
+            {
+                fileContent.Add(key + value);
+            }
         }
 
         private string GetSaveFile()
         {
             var currentFileName = Path.GetFileNameWithoutExtension(FilePath);
-            var currentFilePath = Path.GetDirectoryName(FilePath);
+            var currentFilePath = Path.GetDirectoryName(FilePath)!;
             var currentFileExt = Path.GetExtension(FilePath);
 
             if(SaveMode == SaveMode.One)
             {
-                return $"{currentFilePath}{Path.DirectorySeparatorChar}{currentFileName}{SaveComplement}{currentFileExt}";
+                return Path.Combine(currentFilePath, $"{currentFileName}{SaveComplement}{currentFileExt}");
             }
             else
             {
-                var saveIncrementRegexp = new Regex($@".*{currentFileName}{SaveComplement}\.(\d+)\..*");
+                var saveIncrementRegexp = new Regex($@"^{Regex.Escape(currentFileName + SaveComplement)}\.(\d+){Regex.Escape(currentFileExt)}$", RegexOptions.IgnoreCase);
 
                 var maxSaveIndex = Directory.GetFiles(currentFilePath)
                     .Select(f => saveIncrementRegexp.Match(Path.GetFileName(f)))
@@ -103,7 +123,7 @@ namespace RdpFacilitator
                     .DefaultIfEmpty(0)
                     .Max();
 
-                return $"{currentFilePath}{Path.DirectorySeparatorChar}{currentFileName}{SaveComplement}.{++maxSaveIndex}{currentFileExt}";
+                return Path.Combine(currentFilePath, $"{currentFileName}{SaveComplement}.{++maxSaveIndex}{currentFileExt}");
             }
         }
     }

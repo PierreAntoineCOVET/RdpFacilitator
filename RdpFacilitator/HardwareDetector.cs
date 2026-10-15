@@ -84,7 +84,7 @@ namespace RdpFacilitator
             mi.Size = Marshal.SizeOf(typeof(MONITORINFOEX));
             if (GetMonitorInfo(hMonitor, ref mi))
             {
-                if(Verboose)
+                if(Verbose)
                 {
                     Console.WriteLine($"DeviceName    : {mi.DeviceName}");
                     Console.WriteLine($"Flags         : {mi.Flags}");
@@ -108,11 +108,11 @@ namespace RdpFacilitator
         }
 
         private static Dictionary<string, DetectedMonitor> DisplayInfos = new Dictionary<string, DetectedMonitor>();
-        private static bool Verboose = false;
+        private static bool Verbose = false;
 
         public static IEnumerable<DetectedMonitor> GetDisplayInfos(bool verbose)
         {
-            Verboose = verbose;
+            Verbose = verbose;
 
             EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, MonitorEnumProc, IntPtr.Zero);
 

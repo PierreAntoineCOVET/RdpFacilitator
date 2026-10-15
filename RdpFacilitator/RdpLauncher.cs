@@ -18,7 +18,7 @@ namespace RdpFacilitator
 
         public void StartRemoteSession()
         {
-            var processStartInfo = new ProcessStartInfo("mstsc", FileName);
+            var processStartInfo = new ProcessStartInfo("mstsc", $"\"{FileName}\"");
 
             Process.Start(processStartInfo);
         }

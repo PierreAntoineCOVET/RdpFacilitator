@@ -23,26 +23,48 @@ namespace RdpFacilitator
 
             var displayInfos = HardwareDetector.GetDisplayInfos(options.Verbose);
 
-            var monitorManager = new MonitorManager(displayInfos, options.SelectedMonitors, options.Verbose);
+            var monitorManager = new MonitorManager(displayInfos, options.SelectedMonitors ?? [], options.Verbose);
             if (options.DisplayMonitorGrid)
             {
                 monitorManager.PrintDetectedMonitorGrid();
                 return;
             }
 
-            var selectedMontiros = monitorManager.GetSelectMonitors();
+            if (options.SelectedMonitors == null || !options.SelectedMonitors.Any() || string.IsNullOrWhiteSpace(options.RdpFilePath))
+            {
+                Console.WriteLine("Options -m (monitors) and -f (rdpFile) are required unless -l is used.");
+                Console.WriteLine("Use -h --help for detail about parameters format.");
+                return;
+            }
+
+            var selectedMonitors = monitorManager.GetSelectMonitors();
+
+            if (selectedMonitors == null)
+            {
+                return;
+            }
 
             if(options.Verbose)
             {
-                Console.WriteLine($"Selected monitors : {selectedMontiros}");
+                Console.WriteLine($"Selected monitors : {selectedMonitors}");
             }
 
-            var fileUpdater = new FileUpdater(options.RdpFilePath, options.SaveMode, selectedMontiros);
-            var newFileName = fileUpdater.UpdateRdpFile();
+            var fileUpdater = new FileUpdater(options.RdpFilePath, options.SaveMode, selectedMonitors, options.Address);
 
-            if (options.Execute && !string.IsNullOrWhiteSpace(newFileName))
+            string rdpFileName;
+            try
             {
-                var rdpLauncher = new RdpLauncher(newFileName);
+                rdpFileName = fileUpdater.UpdateRdpFile();
+            }
+            catch (FileNotFoundException ex)
+            {
+                Console.WriteLine(ex.Message);
+                return;
+            }
+
+            if (!options.NoLaunch)
+            {
+                var rdpLauncher = new RdpLauncher(rdpFileName);
                 rdpLauncher.StartRemoteSession();
             }
         }
