@@ -36,9 +36,19 @@ namespace RdpFacilitator
                 return;
             }
 
-            if (options.SelectedMonitors == null || !options.SelectedMonitors.Any() || string.IsNullOrWhiteSpace(options.RdpFilePath))
+            if (options.UseDefaultRdp && !string.IsNullOrWhiteSpace(options.RdpFilePath))
             {
-                Console.WriteLine("Options -m (monitors) and -f (rdpFile) are required unless -l is used.");
+                Console.WriteLine("Options -d (useDefaultRdp) and -f (rdpFile) cannot be used together.");
+                return;
+            }
+
+            var rdpFilePath = options.UseDefaultRdp
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Default.rdp")
+                : options.RdpFilePath;
+
+            if (options.SelectedMonitors == null || !options.SelectedMonitors.Any() || string.IsNullOrWhiteSpace(rdpFilePath))
+            {
+                Console.WriteLine("Options -m (monitors) and -f (rdpFile) or -d (useDefaultRdp) are required unless -l is used.");
                 Console.WriteLine("Use -h --help for detail about parameters format.");
                 return;
             }
@@ -55,23 +65,44 @@ namespace RdpFacilitator
                 Console.WriteLine($"Selected monitors : {selectedMonitors}");
             }
 
-            var fileUpdater = new FileUpdater(options.RdpFilePath, options.SaveMode, selectedMonitors, options.Address);
+            var fileUpdater = new FileUpdater(rdpFilePath, options.SaveMode, selectedMonitors, options.Address);
 
             string rdpFileName;
+            string? address;
             try
             {
                 rdpFileName = fileUpdater.UpdateRdpFile();
+                address = fileUpdater.GetAddress();
             }
-            catch (FileNotFoundException ex)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 Console.WriteLine(ex.Message);
                 return;
             }
 
-            if (!options.NoLaunch)
+            if (options.Verbose)
             {
-                var rdpLauncher = new RdpLauncher(rdpFileName);
-                rdpLauncher.StartRemoteSession();
+                Console.WriteLine($"RDP file : {rdpFileName}");
+            }
+
+            if (options.NoLaunch)
+            {
+                return;
+            }
+
+            if (options.UseDefaultRdp)
+            {
+                if (string.IsNullOrWhiteSpace(address))
+                {
+                    Console.WriteLine($"No remote computer address found in {rdpFileName}. Use -a to give it.");
+                    return;
+                }
+
+                RdpLauncher.FromAddress(address).StartRemoteSession();
+            }
+            else
+            {
+                RdpLauncher.FromFile(rdpFileName).StartRemoteSession();
             }
         }
 

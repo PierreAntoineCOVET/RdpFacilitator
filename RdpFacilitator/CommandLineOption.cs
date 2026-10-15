@@ -47,6 +47,15 @@ namespace RdpFacilitator
 
         [Option('n', "noLaunch", HelpText = "Only update the RDP file, do not launch remote desktop.", Default = false)]
         public bool NoLaunch { get; set; }
+
+        [Option(
+            'd',
+            "useDefaultRdp",
+            HelpText = "Update Default.rdp from the Documents folder instead of -f, and connect with 'mstsc /v:<address>'."
+                + " Avoids the unknown publisher security warning shown when opening an unsigned RDP file.",
+            Default = false
+        )]
+        public bool UseDefaultRdp { get; set; }
     }
 
     public enum SaveMode

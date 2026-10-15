@@ -9,16 +9,20 @@ namespace RdpFacilitator
 {
     public class RdpLauncher
     {
-        private readonly string FileName;
+        private readonly string Arguments;
 
-        public RdpLauncher(string fileName)
+        private RdpLauncher(string arguments)
         {
-            FileName = fileName;
+            Arguments = arguments;
         }
+
+        public static RdpLauncher FromFile(string fileName) => new RdpLauncher($"\"{fileName}\"");
+
+        public static RdpLauncher FromAddress(string address) => new RdpLauncher($"/v:\"{address}\"");
 
         public void StartRemoteSession()
         {
-            var processStartInfo = new ProcessStartInfo("mstsc", $"\"{FileName}\"");
+            var processStartInfo = new ProcessStartInfo("mstsc", Arguments);
 
             Process.Start(processStartInfo);
         }

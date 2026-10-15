@@ -56,3 +56,17 @@ RdpFacilitator is a console application, so Windows opens a console window when 
 - Optionally use **Change Icon** and select `C:\Windows\System32\mstsc.exe`, as the shortcut shows the conhost icon otherwise.
 
 In headless mode no output or error is visible: if nothing happens, run the same command (without `conhost.exe --headless`) in a terminal, with `-v`, to see what is wrong.
+
+### Avoid the unknown publisher security warning
+
+Opening an unsigned RDP file shows a Remote Desktop security warning ("Unknown remote connection", unknown publisher) on each connection. Connecting from the Remote Desktop window does not, because it uses `Default.rdp` from the Documents folder and opens no file.
+
+Use `-d` / `--useDefaultRdp` to do the same: the selected monitors are written to `Default.rdp` in the Documents folder (instead of the `-f` file), then the connection is started with `mstsc /v:<address>`. The address comes from `-a`, or from the `full address` already stored in `Default.rdp`.
+```powershell
+.\RdpFacilitator.exe -m 0:0,0:1 -a my-remote-host -d
+```
+Desktop shortcut target:
+```
+C:\Windows\System32\conhost.exe --headless "C:\path\to\RdpFacilitator.exe" -m 0:0,0:1 -a my-remote-host -d
+```
+Connecting from the Remote Desktop window saves its own settings to `Default.rdp`, which may change the monitor selection; the next launch with `-d` writes it back.

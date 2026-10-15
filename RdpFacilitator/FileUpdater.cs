@@ -89,10 +89,43 @@ namespace RdpFacilitator
 
             if(SaveMode != SaveMode.None)
             {
-                File.Copy(FilePath, GetSaveFile(), true);
+                var saveFile = GetSaveFile();
+
+                if (File.Exists(saveFile))
+                {
+                    File.Delete(saveFile);
+                }
+
+                File.Copy(FilePath, saveFile);
             }
 
-            File.WriteAllLines(FilePath, fileContent, encoding);
+            using (var writer = new StreamWriter(new FileStream(FilePath, FileMode.Truncate, FileAccess.Write), encoding))
+            {
+                foreach (var line in fileContent)
+                {
+                    writer.WriteLine(line);
+                }
+            }
+        }
+
+        public string? GetAddress()
+        {
+            if (!string.IsNullOrWhiteSpace(Address))
+            {
+                return Address;
+            }
+
+            if (!File.Exists(FilePath))
+            {
+                return null;
+            }
+
+            var addressLine = File.ReadLines(FilePath)
+                .FirstOrDefault(l => l.StartsWith(FullAddressKey, StringComparison.OrdinalIgnoreCase));
+
+            var address = addressLine?.Substring(FullAddressKey.Length).Trim();
+
+            return string.IsNullOrWhiteSpace(address) ? null : address;
         }
 
         private static bool SetValue(List<string> fileContent, string key, string value)
