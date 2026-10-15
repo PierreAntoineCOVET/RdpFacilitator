@@ -34,3 +34,25 @@ $dir = "C:\path\to\RdpFacilitator"
 - Next runs: with the default `-s One`, the current file is first copied to `my-remote-host.save.rdp`, then updated and launched. Use `-s None` to skip the backup, or `-s Incremental` to keep every version (`my-remote-host.save.1.rdp`, `my-remote-host.save.2.rdp`, ...).
 - `-a` is required only when the file does not exist yet; on an existing file it replaces the address.
 - Add `-v` for verbose output, or `-n` to only create/update the file without connecting.
+
+### Row tolerance
+
+Monitors whose top edges are at most 10 px apart (by default) are considered on the same row, so slightly misaligned monitors still end up on the same row of the grid. Use `-t` / `--rowTolerance` to change it, for example to allow up to 50 px:
+```powershell
+.\RdpFacilitator.exe -l -t 50
+.\RdpFacilitator.exe -m 0:0,0:1 -f my-remote-host.rdp -a my-remote-host -t 50
+```
+Use `-t 0` to only group monitors whose top edges are exactly aligned.
+
+### Launch from a desktop shortcut without a console window
+
+RdpFacilitator is a console application, so Windows opens a console window when it starts. To hide it when using a desktop shortcut, start it through `conhost.exe --headless`. Shortcut properties:
+
+- **Target**:
+  ```
+  C:\Windows\System32\conhost.exe --headless "C:\path\to\RdpFacilitator.exe" -m 0:0,0:1 -f "C:\path\to\my-remote-host.rdp" -a my-remote-host
+  ```
+- **Start in**: the executable folder, so relative `-f` paths are resolved next to the executable.
+- Optionally use **Change Icon** and select `C:\Windows\System32\mstsc.exe`, as the shortcut shows the conhost icon otherwise.
+
+In headless mode no output or error is visible: if nothing happens, run the same command (without `conhost.exe --headless`) in a terminal, with `-v`, to see what is wrong.

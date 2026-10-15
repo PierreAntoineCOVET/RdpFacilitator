@@ -11,13 +11,15 @@ namespace RdpFacilitator
         private readonly IEnumerable<DetectedMonitor> DetectedMonitorInfos;
         private readonly IEnumerable<string> SelectedMonitorsString;
         private readonly bool Verbose;
+        private readonly int RowTolerance;
         private readonly List<RequestedMonitorPosition> SelectedMonitorPositions = new List<RequestedMonitorPosition>();
 
-        public MonitorManager(IEnumerable<DetectedMonitor> detectedMonitors, IEnumerable<string> selectedMonitors, bool verbose)
+        public MonitorManager(IEnumerable<DetectedMonitor> detectedMonitors, IEnumerable<string> selectedMonitors, bool verbose, int rowTolerance)
         {
             DetectedMonitorInfos = detectedMonitors;
             SelectedMonitorsString = selectedMonitors;
             Verbose = verbose;
+            RowTolerance = rowTolerance;
         }
 
         public void PrintDetectedMonitorGrid()
@@ -38,20 +40,22 @@ namespace RdpFacilitator
 
         private void ComputeDetectedMonitorGridIndex()
         {
-            var rows = DetectedMonitorInfos
-                .Select(d => d.TopMost)
-                .Distinct()
-                .Order()
-                .ToList();
+            var rows = new List<List<DetectedMonitor>>();
+
+            foreach (var monitor in DetectedMonitorInfos.OrderBy(d => d.TopMost))
+            {
+                if (rows.Count == 0 || monitor.TopMost - rows[^1][0].TopMost > RowTolerance)
+                {
+                    rows.Add(new List<DetectedMonitor>());
+                }
+
+                rows[^1].Add(monitor);
+            }
 
             int rowIndex = 0, columnIndex = 0;
 
-            foreach (var row in rows)
+            foreach (var monitorsOnRow in rows)
             {
-                var monitorsOnRow = DetectedMonitorInfos
-                    .Where(d => d.TopMost == row)
-                    .ToList();
-
                 var columns = monitorsOnRow
                     .Select(d => d.LeftMostPosition)
                     .Distinct()

@@ -34,11 +34,6 @@ namespace RdpFacilitator
                 return FilePath;
             }
 
-            if(SaveMode != SaveMode.None)
-            {
-                File.Copy(FilePath, GetSaveFile(), true);
-            }
-
             UpdateExistingRdpFile();
 
             return FilePath;
@@ -77,29 +72,46 @@ namespace RdpFacilitator
                 fileContent.RemoveAt(fileContent.Count - 1);
             }
 
+            var hasChanged = false;
+
             if (!string.IsNullOrWhiteSpace(Address))
             {
-                SetValue(fileContent, FullAddressKey, Address);
+                hasChanged |= SetValue(fileContent, FullAddressKey, Address);
             }
 
-            SetValue(fileContent, MultiMonitorKey, "1");
-            SetValue(fileContent, SelectedMonitorsKey, SelectedMonitors);
+            hasChanged |= SetValue(fileContent, MultiMonitorKey, "1");
+            hasChanged |= SetValue(fileContent, SelectedMonitorsKey, SelectedMonitors);
+
+            if (!hasChanged)
+            {
+                return;
+            }
+
+            if(SaveMode != SaveMode.None)
+            {
+                File.Copy(FilePath, GetSaveFile(), true);
+            }
 
             File.WriteAllLines(FilePath, fileContent, encoding);
         }
 
-        private static void SetValue(List<string> fileContent, string key, string value)
+        private static bool SetValue(List<string> fileContent, string key, string value)
         {
             var index = fileContent.FindIndex(l => l.StartsWith(key, StringComparison.OrdinalIgnoreCase));
 
-            if (index >= 0)
-            {
-                fileContent[index] = key + value;
-            }
-            else
+            if (index < 0)
             {
                 fileContent.Add(key + value);
+                return true;
             }
+
+            if (fileContent[index] == key + value)
+            {
+                return false;
+            }
+
+            fileContent[index] = key + value;
+            return true;
         }
 
         private string GetSaveFile()

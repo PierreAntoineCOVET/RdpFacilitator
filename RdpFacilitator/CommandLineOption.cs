@@ -21,6 +21,14 @@ namespace RdpFacilitator
         public bool DisplayMonitorGrid { get; set; }
 
         [Option(
+            't',
+            "rowTolerance",
+            HelpText = "Maximum vertical offset in pixels between the tops of monitors considered on the same row.",
+            Default = 10
+        )]
+        public int RowTolerance { get; set; }
+
+        [Option(
             's',
             "saveMode",
             HelpText = "(Default: One). Define the behavior before updating the given RDP file:"

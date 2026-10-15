@@ -21,9 +21,15 @@ namespace RdpFacilitator
             // List cmdkey /list:TERMSRV/*
             // cmdkey /delete:TERMSRV/<targetNameOrIp>
 
+            if (options.RowTolerance < 0)
+            {
+                Console.WriteLine("Option -t (rowTolerance) must be 0 or more pixels.");
+                return;
+            }
+
             var displayInfos = HardwareDetector.GetDisplayInfos(options.Verbose);
 
-            var monitorManager = new MonitorManager(displayInfos, options.SelectedMonitors ?? [], options.Verbose);
+            var monitorManager = new MonitorManager(displayInfos, options.SelectedMonitors ?? [], options.Verbose, options.RowTolerance);
             if (options.DisplayMonitorGrid)
             {
                 monitorManager.PrintDetectedMonitorGrid();
